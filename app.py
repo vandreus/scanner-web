@@ -102,6 +102,30 @@ def update_all_scanner_status():
         for scanner_id in CONFIG['scanners']:
             SCANNER_STATUS[scanner_id] = get_scanner_status(scanner_id)
 
+# Background keep-alive thread
+KEEP_ALIVE_RUNNING = True
+
+def scanner_keep_alive():
+    """Background thread that pings scanners every 5 minutes to keep them awake"""
+    while KEEP_ALIVE_RUNNING:
+        try:
+            for scanner_id in CONFIG['scanners']:
+                base_url = get_escl_base(scanner_id)
+                if base_url:
+                    try:
+                        requests.get(f"{base_url}/ScannerStatus", verify=False, timeout=5)
+                    except:
+                        pass
+        except:
+            pass
+        time.sleep(300)
+
+def start_keep_alive_thread():
+    """Start the background keep-alive thread"""
+    thread = threading.Thread(target=scanner_keep_alive, daemon=True)
+    thread.start()
+    print("Scanner keep-alive thread started (5 min interval)")
+
 def create_scan_settings(scanner_id, duplex=False):
     scanner = CONFIG['scanners'].get(scanner_id, {})
     if scanner.get('type') == 'flatbed':
@@ -385,5 +409,7 @@ if __name__ == '__main__':
         for dest, settings in dests.items():
             if settings.get('path'):
                 os.makedirs(settings['path'], exist_ok=True)
+    # Start the keep-alive thread
+    start_keep_alive_thread()
     print("Scanner Web App Starting...")
     app.run(host='0.0.0.0', port=8080, debug=False)
