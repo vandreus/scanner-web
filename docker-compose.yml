@@ -1,22 +1,14 @@
+version: "3.8"
 services:
   scanner-web:
     build: .
     container_name: scanner-web
+    restart: unless-stopped
     ports:
       - "8088:8080"
     volumes:
-      - /share/homes/vandreus/dox:/scans
+      - /share/Dox/Scan:/scans
       - /share/Container/paperless/consume:/paperless
-    depends_on:
-      - smtp
-    restart: unless-stopped
-    networks:
-      - scanner-net
-
-  smtp:
-    image: namshi/smtp
-    container_name: scanner-smtp
-    restart: unless-stopped
     networks:
       - scanner-net
 

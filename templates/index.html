@@ -8,8 +8,6 @@
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); min-height: 100vh; padding: 12px; color: #fff; }
         .container { max-width: 500px; margin: 0 auto; }
-
-        /* Header with scanner selector */
         header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 12px; background: rgba(255,255,255,0.05); border-radius: 12px; }
         .header-left { display: flex; align-items: center; gap: 10px; }
         .header-left h1 { font-size: 1.3rem; font-weight: 600; }
@@ -19,18 +17,12 @@
         .status-dot.scanning { background: #fbbf24; animation: pulse 1s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         .status-text { font-size: 0.75rem; opacity: 0.7; }
-
-        /* Scanner dropdown */
         .scanner-select { padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: white; font-size: 0.85rem; cursor: pointer; min-width: 120px; }
         .scanner-select option { background: #1e293b; color: white; }
-
-        /* Toggle buttons */
         .toggle-row { display: flex; gap: 6px; margin-bottom: 12px; background: rgba(255,255,255,0.1); padding: 4px; border-radius: 10px; }
         .toggle-btn { flex: 1; padding: 10px 8px; border: none; border-radius: 6px; font-size: 0.85rem; font-weight: 600; cursor: pointer; background: transparent; color: rgba(255,255,255,0.6); transition: all 0.2s ease; }
         .toggle-btn.active { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3); }
         .toggle-btn.dest-active { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
-
-        /* Scan buttons */
         .scan-buttons { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
         .scan-btn { display: flex; align-items: center; gap: 12px; padding: 16px; border: none; border-radius: 12px; font-size: 1rem; font-weight: 500; cursor: pointer; transition: all 0.2s ease; text-align: left; }
         .scan-btn:active { transform: scale(0.98); }
@@ -42,8 +34,7 @@
         .btn-single { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; }
         .btn-duplex { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); color: white; }
         .btn-multi { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; }
-
-        /* Result box */
+        .btn-multi-duplex { background: linear-gradient(135deg, #ec4899 0%, #db2777 100%); color: white; }
         .result { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px; margin-bottom: 12px; display: none; }
         .result.show { display: block; animation: slideIn 0.3s ease; }
         .result.success { border-left: 3px solid #4ade80; }
@@ -51,22 +42,16 @@
         @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .result h3 { font-size: 0.9rem; margin-bottom: 4px; }
         .result p { font-size: 0.8rem; opacity: 0.9; }
-
-        /* Settings */
         .settings { background: rgba(255,255,255,0.05); border-radius: 10px; padding: 12px; cursor: pointer; }
         .settings:hover { background: rgba(255,255,255,0.08); }
         .settings h3 { font-size: 0.8rem; margin-bottom: 8px; opacity: 0.7; }
         .setting-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; font-size: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .setting-row:last-child { border-bottom: none; }
         .setting-value { opacity: 0.7; font-family: monospace; max-width: 140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        /* Spinner */
         .spinner { display: none; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top-color: white; border-radius: 50%; animation: spin 1s linear infinite; }
         .scanning .spinner { display: inline-block; }
         .scanning .icon-default { display: none; }
         @keyframes spin { to { transform: rotate(360deg); } }
-
-        /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
         .modal.show { display: flex; }
         .modal-content { background: #1e293b; border-radius: 14px; padding: 20px; width: 100%; max-width: 380px; max-height: 85vh; overflow-y: auto; }
@@ -78,8 +63,6 @@
         .modal-btn { flex: 1; padding: 12px; border: none; border-radius: 6px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
         .modal-btn.cancel { background: rgba(255,255,255,0.1); color: white; }
         .modal-btn.save { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; }
-
-        /* Multi-page modal counter */
         .page-counter { background: rgba(255,255,255,0.1); border-radius: 10px; padding: 14px; margin-bottom: 16px; text-align: center; }
         .page-counter .count { font-size: 2.5rem; font-weight: 700; }
         .page-counter .label { font-size: 0.8rem; opacity: 0.7; }
@@ -87,7 +70,6 @@
 </head>
 <body>
     <div class="container">
-        <!-- Header -->
         <header>
             <div class="header-left">
                 <h1>📠 Scanner</h1>
@@ -100,216 +82,90 @@
                 <option value="canon_flatbed">Canon Flatbed</option>
             </select>
         </header>
-
-        <!-- Profile Toggle -->
         <div class="toggle-row">
             <button class="toggle-btn active" id="profileReceipt" onclick="setProfile('receipt')">🧾 Receipts</button>
             <button class="toggle-btn" id="profileDocument" onclick="setProfile('document')">📄 Documents</button>
         </div>
-
-        <!-- Destination Toggle (Receipt) -->
         <div class="toggle-row" id="destReceipt">
-            <button class="toggle-btn dest-active" id="destReceiptSpark" onclick="setDestination('receipt', 'spark')">📧 Spark</button>
+            <button class="toggle-btn dest-active" id="destReceiptSpark" onclick="setDestination('receipt', 'spark')">📧 SparkReceipt</button>
             <button class="toggle-btn" id="destReceiptFolder" onclick="setDestination('receipt', 'folder')">📁 Folder</button>
         </div>
-
-        <!-- Destination Toggle (Document) -->
         <div class="toggle-row" id="destDocument" style="display: none;">
             <button class="toggle-btn dest-active" id="destDocPaperless" onclick="setDestination('document', 'paperless')">📥 Paperless</button>
             <button class="toggle-btn" id="destDocFolder" onclick="setDestination('document', 'folder')">📁 Folder</button>
         </div>
-
-        <!-- Scan Buttons -->
         <div class="scan-buttons">
-            <button class="scan-btn btn-single" onclick="scan('single')" id="btnSingle">
-                <span class="icon"><span class="icon-default">📄</span><span class="spinner"></span></span>
-                <span class="text"><span class="title">Single-Sided</span><span class="desc">1 PDF per sheet</span></span>
-            </button>
-            <button class="scan-btn btn-duplex" onclick="scan('duplex_vertical')" id="btnDuplex">
-                <span class="icon"><span class="icon-default">📚</span><span class="spinner"></span></span>
-                <span class="text"><span class="title">Double-Sided</span><span class="desc">1 PDF per sheet (2 pages)</span></span>
-            </button>
-            <button class="scan-btn btn-multi" onclick="startMultiPage()" id="btnMulti">
-                <span class="icon"><span class="icon-default">📑</span><span class="spinner"></span></span>
-                <span class="text"><span class="title">Multi-Page</span><span class="desc">All pages in 1 PDF</span></span>
-            </button>
+            <button class="scan-btn btn-single" onclick="scan('single')" id="btnSingle"><span class="icon"><span class="icon-default">📄</span><span class="spinner"></span></span><span class="text"><span class="title">Single-Sided</span><span class="desc">1 PDF per sheet</span></span></button>
+            <button class="scan-btn btn-duplex" onclick="scan('duplex_vertical')" id="btnDuplex"><span class="icon"><span class="icon-default">📚</span><span class="spinner"></span></span><span class="text"><span class="title">Double-Sided</span><span class="desc">1 PDF per sheet (2 pages)</span></span></button>
+            <button class="scan-btn btn-multi" onclick="startMultiPage(false)" id="btnMulti"><span class="icon"><span class="icon-default">📑</span><span class="spinner"></span></span><span class="text"><span class="title">Multi-Page</span><span class="desc">All pages in 1 PDF</span></span></button>
+            <button class="scan-btn btn-multi-duplex" onclick="startMultiPage(true)" id="btnMultiDuplex"><span class="icon"><span class="icon-default">📖</span><span class="spinner"></span></span><span class="text"><span class="title">Multi-Page Double-Sided</span><span class="desc">All pages in 1 PDF (both sides)</span></span></button>
         </div>
-
-        <!-- Result -->
-        <div class="result" id="result">
-            <h3 id="resultTitle">Result</h3>
-            <p id="resultMessage"></p>
-        </div>
-
-        <!-- Settings -->
+        <div class="result" id="result"><h3 id="resultTitle">Result</h3><p id="resultMessage"></p></div>
         <div class="settings" onclick="openSettings()">
             <h3>⚙️ Settings <span style="float:right;opacity:0.5">tap</span></h3>
             <div class="setting-row"><span>📧 SparkReceipt</span><span class="setting-value" id="sparkEmail">-</span></div>
             <div class="setting-row"><span>📥 Paperless</span><span class="setting-value" id="paperlessPath">-</span></div>
         </div>
     </div>
-
-    <!-- Multi-Page Modal -->
     <div class="modal" id="multiPageModal">
         <div class="modal-content">
-            <h2>📑 Multi-Page Scan</h2>
-            <div class="page-counter">
-                <div class="count" id="multiPageCount">0</div>
-                <div class="label">Pages Scanned</div>
-            </div>
+            <h2 id="multiPageTitle">📑 Multi-Page Scan</h2>
+            <div class="page-counter"><div class="count" id="multiPageCount">0</div><div class="label">Pages Scanned</div></div>
             <div id="multiPageStatus" style="text-align: center; margin-bottom: 16px; min-height: 20px; font-size: 0.85rem;"></div>
-            <button class="scan-btn btn-single" onclick="addPage()" id="btnAddPage" style="margin-bottom: 10px;">
-                <span class="icon"><span class="icon-default">➕</span><span class="spinner"></span></span>
-                <span class="text"><span class="title">Add Page(s)</span><span class="desc">Scan from feeder or flatbed</span></span>
-            </button>
-            <div class="modal-buttons">
-                <button class="modal-btn cancel" onclick="cancelMultiPage()">Cancel</button>
-                <button class="modal-btn save" onclick="finishMultiPage()" id="btnFinish">Done</button>
-            </div>
+            <button class="scan-btn btn-single" onclick="addPage()" id="btnAddPage" style="margin-bottom: 10px;"><span class="icon"><span class="icon-default">➕</span><span class="spinner"></span></span><span class="text"><span class="title">Add Page(s)</span><span class="desc">Scan from feeder or flatbed</span></span></button>
+            <div class="modal-buttons"><button class="modal-btn cancel" onclick="cancelMultiPage()">Cancel</button><button class="modal-btn save" onclick="finishMultiPage()" id="btnFinish">Done</button></div>
         </div>
     </div>
-
-    <!-- Settings Modal -->
     <div class="modal" id="settingsModal">
         <div class="modal-content">
             <h2>⚙️ Settings</h2>
-            <label>Brother IP</label>
-            <input type="text" id="inputBrotherIp" placeholder="10.69.7.167">
-            <label>Canon IP</label>
-            <input type="text" id="inputCanonIp" placeholder="10.69.7.107">
-            <label>📧 SparkReceipt Email</label>
-            <input type="text" id="inputSparkEmail" placeholder="email@to.sparkreceipt.com">
-            <label>📁 Receipts Folder</label>
-            <input type="text" id="inputReceiptFolder" placeholder="/scans/Receipts">
-            <label>📥 Paperless Folder</label>
-            <input type="text" id="inputPaperlessPath" placeholder="/paperless">
-            <label>📁 Documents Folder</label>
-            <input type="text" id="inputDocFolder" placeholder="/scans/Documents">
-            <div class="modal-buttons">
-                <button class="modal-btn cancel" onclick="closeSettings()">Cancel</button>
-                <button class="modal-btn save" onclick="saveSettings()">Save</button>
-            </div>
+            <label>Brother IP</label><input type="text" id="inputBrotherIp" placeholder="10.69.7.167">
+            <label>Canon IP</label><input type="text" id="inputCanonIp" placeholder="10.69.7.107">
+            <label>📧 SparkReceipt Email</label><input type="text" id="inputSparkEmail" placeholder="email@to.sparkreceipt.com">
+            <label>📁 Receipts Folder</label><input type="text" id="inputReceiptFolder" placeholder="/scans/Receipts">
+            <label>📥 Paperless Folder</label><input type="text" id="inputPaperlessPath" placeholder="/paperless">
+            <label>📁 Documents Folder</label><input type="text" id="inputDocFolder" placeholder="/scans/Documents">
+            <div class="modal-buttons"><button class="modal-btn cancel" onclick="closeSettings()">Cancel</button><button class="modal-btn save" onclick="saveSettings()">Save</button></div>
         </div>
     </div>
-
     <script>
         const API_BASE = '';
-        let currentProfile = 'receipt';
-        let currentDestinations = { receipt: 'spark', document: 'paperless' };
-        let currentScanner = 'brother';
-        let scannerInfo = {};
-        let multiPageSessionId = null;
-
-        function setProfile(profile) {
-            currentProfile = profile;
-            document.getElementById('profileReceipt').classList.toggle('active', profile === 'receipt');
-            document.getElementById('profileDocument').classList.toggle('active', profile === 'document');
-            document.getElementById('destReceipt').style.display = profile === 'receipt' ? 'flex' : 'none';
-            document.getElementById('destDocument').style.display = profile === 'document' ? 'flex' : 'none';
-        }
-
-        function setDestination(profile, dest) {
-            currentDestinations[profile] = dest;
-            if (profile === 'receipt') {
-                document.getElementById('destReceiptSpark').classList.toggle('dest-active', dest === 'spark');
-                document.getElementById('destReceiptFolder').classList.toggle('dest-active', dest === 'folder');
-            } else {
-                document.getElementById('destDocPaperless').classList.toggle('dest-active', dest === 'paperless');
-                document.getElementById('destDocFolder').classList.toggle('dest-active', dest === 'folder');
-            }
-            fetch(`${API_BASE}/api/destination/select`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ profile, destination: dest })
-            });
-        }
-
-        async function selectScanner(scannerId) {
-            currentScanner = scannerId;
-            await fetch(`${API_BASE}/api/scanner/select`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ scanner: scannerId })
-            });
-            updateUI();
-            checkStatus();
-        }
-
-        function updateUI() {
-            const scanner = scannerInfo[currentScanner] || {};
+        let currentProfile = 'receipt', currentDestinations = { receipt: 'spark', document: 'paperless' }, currentScanner = 'brother', scannerInfo = {}, multiPageSessionId = null, multiPageDuplex = false;
+        
+        function setProfile(profile) { currentProfile = profile; document.getElementById('profileReceipt').classList.toggle('active', profile === 'receipt'); document.getElementById('profileDocument').classList.toggle('active', profile === 'document'); document.getElementById('destReceipt').style.display = profile === 'receipt' ? 'flex' : 'none'; document.getElementById('destDocument').style.display = profile === 'document' ? 'flex' : 'none'; }
+        
+        function setDestination(profile, dest) { currentDestinations[profile] = dest; if (profile === 'receipt') { document.getElementById('destReceiptSpark').classList.toggle('dest-active', dest === 'spark'); document.getElementById('destReceiptFolder').classList.toggle('dest-active', dest === 'folder'); } else { document.getElementById('destDocPaperless').classList.toggle('dest-active', dest === 'paperless'); document.getElementById('destDocFolder').classList.toggle('dest-active', dest === 'folder'); } fetch(`${API_BASE}/api/destination/select`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile, destination: dest }) }); }
+        
+        async function selectScanner(scannerId) { currentScanner = scannerId; await fetch(`${API_BASE}/api/scanner/select`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scanner: scannerId }) }); updateUI(); checkStatus(); }
+        
+        function updateUI() { 
+            const scanner = scannerInfo[currentScanner] || {}; 
             const supportsDuplex = scanner.supports_duplex !== false;
-            document.getElementById('btnDuplex').style.display = supportsDuplex ? 'flex' : 'none';
+            document.getElementById('btnDuplex').style.display = supportsDuplex ? 'flex' : 'none'; 
+            document.getElementById('btnMultiDuplex').style.display = supportsDuplex ? 'flex' : 'none'; 
         }
-
-        async function checkStatus() {
-            try {
-                const response = await fetch(`${API_BASE}/api/status`);
-                const data = await response.json();
-
-                currentScanner = data.selected_scanner || 'brother';
-                scannerInfo = data.scanners || {};
-                currentDestinations = data.selected_destinations || { receipt: 'spark', document: 'paperless' };
-
-                document.getElementById('scannerSelect').value = currentScanner;
-
-                const scanner = scannerInfo[currentScanner] || {};
-                const dot = document.getElementById('statusDot');
-                const text = document.getElementById('statusText');
-
-                if (scanner.status === 'Idle' || scanner.status === 'Ready') {
-                    dot.className = 'status-dot online';
-                    text.textContent = 'Ready';
-                } else if (scanner.status === 'Offline') {
-                    dot.className = 'status-dot offline';
-                    text.textContent = 'Offline';
-                } else {
-                    dot.className = 'status-dot';
-                    text.textContent = scanner.status || '...';
-                }
-
-                // Update destination toggles
-                setDestination('receipt', currentDestinations.receipt || 'spark');
-                setDestination('document', currentDestinations.document || 'paperless');
-
-                // Update settings display
-                if (data.destinations) {
-                    document.getElementById('sparkEmail').textContent = data.destinations.receipt?.spark?.email || '-';
-                    document.getElementById('paperlessPath').textContent = data.destinations.document?.paperless?.path || '-';
-                }
-
-                updateUI();
-            } catch (error) {
-                document.getElementById('statusDot').className = 'status-dot offline';
-                document.getElementById('statusText').textContent = 'Error';
-            }
-        }
-
-        async function scan(preset) {
-            const btn = document.getElementById(preset === 'single' ? 'btnSingle' : 'btnDuplex');
+        
+        async function checkStatus() { try { const response = await fetch(`${API_BASE}/api/status`); const data = await response.json(); currentScanner = data.selected_scanner || 'brother'; scannerInfo = data.scanners || {}; currentDestinations = data.selected_destinations || { receipt: 'spark', document: 'paperless' }; document.getElementById('scannerSelect').value = currentScanner; const scanner = scannerInfo[currentScanner] || {}; const dot = document.getElementById('statusDot'); const text = document.getElementById('statusText'); if (scanner.status === 'Idle' || scanner.status === 'Ready') { dot.className = 'status-dot online'; text.textContent = 'Ready'; } else if (scanner.status === 'Offline') { dot.className = 'status-dot offline'; text.textContent = 'Offline'; } else { dot.className = 'status-dot'; text.textContent = scanner.status || '...'; } setDestination('receipt', currentDestinations.receipt || 'spark'); setDestination('document', currentDestinations.document || 'paperless'); if (data.destinations) { document.getElementById('sparkEmail').textContent = data.destinations.receipt?.spark?.email || '-'; document.getElementById('paperlessPath').textContent = data.destinations.document?.paperless?.path || '-'; } updateUI(); } catch (error) { document.getElementById('statusDot').className = 'status-dot offline'; document.getElementById('statusText').textContent = 'Error'; } }
+        
+        async function scan(preset) { const btn = document.getElementById(preset === 'single' ? 'btnSingle' : 'btnDuplex'); const allBtns = document.querySelectorAll('.scan-btn'); allBtns.forEach(b => b.disabled = true); btn.classList.add('scanning'); document.getElementById('statusDot').className = 'status-dot scanning'; document.getElementById('statusText').textContent = 'Scanning...'; document.getElementById('result').classList.remove('show'); try { const response = await fetch(`${API_BASE}/api/scan`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset, profile: currentProfile }) }); const data = await response.json(); const result = document.getElementById('result'); if (data.success) { result.className = 'result show success'; document.getElementById('resultTitle').textContent = '✅ Scan Complete'; const destName = data.destination === 'spark' ? 'SparkReceipt' : data.destination === 'paperless' ? 'Paperless' : 'Folder'; document.getElementById('resultMessage').textContent = `${data.total_sheets} PDF(s) → ${destName}`; } else { result.className = 'result show error'; document.getElementById('resultTitle').textContent = '❌ Scan Failed'; document.getElementById('resultMessage').textContent = data.error || 'Unknown error'; } } catch (error) { document.getElementById('result').className = 'result show error'; document.getElementById('resultTitle').textContent = '❌ Error'; document.getElementById('resultMessage').textContent = error.message; } allBtns.forEach(b => b.disabled = false); btn.classList.remove('scanning'); checkStatus(); }
+        
+        async function scanMultiPageDirect(duplex) {
+            const btn = document.getElementById(duplex ? 'btnMultiDuplex' : 'btnMulti');
             const allBtns = document.querySelectorAll('.scan-btn');
-
             allBtns.forEach(b => b.disabled = true);
             btn.classList.add('scanning');
             document.getElementById('statusDot').className = 'status-dot scanning';
             document.getElementById('statusText').textContent = 'Scanning...';
             document.getElementById('result').classList.remove('show');
-
             try {
-                const response = await fetch(`${API_BASE}/api/scan`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ preset, profile: currentProfile })
-                });
+                const response = await fetch(`${API_BASE}/api/scan/multi`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile: currentProfile, duplex: duplex }) });
                 const data = await response.json();
                 const result = document.getElementById('result');
-
                 if (data.success) {
                     result.className = 'result show success';
-                    document.getElementById('resultTitle').textContent = '✅ Scan Complete';
-                    const destName = data.destination === 'spark' ? 'SparkReceipt' :
-                                    data.destination === 'paperless' ? 'Paperless' : 'Folder';
-                    document.getElementById('resultMessage').textContent =
-                        `${data.total_sheets} PDF(s) → ${destName}`;
+                    document.getElementById('resultTitle').textContent = '✅ Multi-Page Complete';
+                    const destName = data.destination === 'spark' ? 'SparkReceipt' : data.destination === 'paperless' ? 'Paperless' : 'Folder';
+                    document.getElementById('resultMessage').textContent = `${data.pages} pages → ${destName}`;
                 } else {
                     result.className = 'result show error';
                     document.getElementById('resultTitle').textContent = '❌ Scan Failed';
@@ -320,155 +176,37 @@
                 document.getElementById('resultTitle').textContent = '❌ Error';
                 document.getElementById('resultMessage').textContent = error.message;
             }
-
             allBtns.forEach(b => b.disabled = false);
             btn.classList.remove('scanning');
             checkStatus();
         }
-
-        async function startMultiPage() {
-            try {
-                const response = await fetch(`${API_BASE}/api/scan/start`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ profile: currentProfile })
-                });
-                const data = await response.json();
-                if (data.success) {
-                    multiPageSessionId = data.session_id;
-                    document.getElementById('multiPageCount').textContent = '0';
-                    document.getElementById('multiPageStatus').textContent = 'Load pages and tap "Add Page(s)"';
-                    document.getElementById('multiPageModal').classList.add('show');
-                }
-            } catch (error) {
-                alert('Error: ' + error.message);
+        
+        async function startMultiPage(duplex) {
+            multiPageDuplex = duplex;
+            // Canon Feeder: direct scan, no popup
+            if (currentScanner === 'canon_feeder') {
+                scanMultiPageDirect(duplex);
+                return;
             }
+            // Brother & Canon Flatbed: popup for manual page adding
+            document.getElementById('multiPageTitle').textContent = duplex ? '📖 Multi-Page Double-Sided' : '📑 Multi-Page Scan';
+            try { const response = await fetch(`${API_BASE}/api/scan/start`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile: currentProfile, duplex: duplex }) }); const data = await response.json(); if (data.success) { multiPageSessionId = data.session_id; document.getElementById('multiPageCount').textContent = '0'; document.getElementById('multiPageStatus').textContent = 'Load pages and tap "Add Page(s)"'; document.getElementById('multiPageModal').classList.add('show'); } } catch (error) { alert('Error: ' + error.message); }
         }
-
-        async function addPage() {
-            if (!multiPageSessionId) return;
-            const btn = document.getElementById('btnAddPage');
-            const status = document.getElementById('multiPageStatus');
-
-            btn.disabled = true;
-            btn.classList.add('scanning');
-            status.textContent = 'Scanning...';
-
-            try {
-                const response = await fetch(`${API_BASE}/api/scan/add/${multiPageSessionId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const data = await response.json();
-                if (data.success) {
-                    document.getElementById('multiPageCount').textContent = data.total_pages;
-                    status.innerHTML = `<span style="color:#4ade80">✓ Added ${data.pages_added}</span> - Add more or tap Done`;
-                } else {
-                    status.innerHTML = `<span style="color:#f87171">✗ ${data.error}</span>`;
-                }
-            } catch (error) {
-                status.innerHTML = `<span style="color:#f87171">✗ ${error.message}</span>`;
-            }
-
-            btn.disabled = false;
-            btn.classList.remove('scanning');
-        }
-
-        async function finishMultiPage() {
-            if (!multiPageSessionId) return;
-            const btn = document.getElementById('btnFinish');
-            const status = document.getElementById('multiPageStatus');
-
-            btn.disabled = true;
-            status.textContent = 'Creating PDF...';
-
-            try {
-                const response = await fetch(`${API_BASE}/api/scan/done/${multiPageSessionId}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' }
-                });
-                const data = await response.json();
-                if (data.success) {
-                    document.getElementById('multiPageModal').classList.remove('show');
-                    multiPageSessionId = null;
-                    const result = document.getElementById('result');
-                    result.className = 'result show success';
-                    document.getElementById('resultTitle').textContent = '✅ Multi-Page Complete';
-                    const destName = data.destination === 'spark' ? 'SparkReceipt' :
-                                    data.destination === 'paperless' ? 'Paperless' : 'Folder';
-                    document.getElementById('resultMessage').textContent = `${data.pages} pages → ${destName}`;
-                } else {
-                    status.innerHTML = `<span style="color:#f87171">✗ ${data.error}</span>`;
-                }
-            } catch (error) {
-                status.innerHTML = `<span style="color:#f87171">✗ ${error.message}</span>`;
-            }
-
-            btn.disabled = false;
-        }
-
-        async function cancelMultiPage() {
-            if (multiPageSessionId) {
-                try { await fetch(`${API_BASE}/api/scan/cancel/${multiPageSessionId}`, { method: 'POST' }); } catch (e) {}
-            }
-            multiPageSessionId = null;
-            document.getElementById('multiPageModal').classList.remove('show');
-        }
-
-        function openSettings() {
-            fetch(`${API_BASE}/api/config`).then(r => r.json()).then(config => {
-                document.getElementById('inputBrotherIp').value = config.scanners?.brother?.ip || '';
-                document.getElementById('inputCanonIp').value = config.scanners?.canon_feeder?.ip || '';
-                document.getElementById('inputSparkEmail').value = config.destinations?.receipt?.spark?.email || '';
-                document.getElementById('inputReceiptFolder').value = config.destinations?.receipt?.folder?.path || '';
-                document.getElementById('inputPaperlessPath').value = config.destinations?.document?.paperless?.path || '';
-                document.getElementById('inputDocFolder').value = config.destinations?.document?.folder?.path || '';
-            });
-            document.getElementById('settingsModal').classList.add('show');
-        }
-
-        function closeSettings() {
-            document.getElementById('settingsModal').classList.remove('show');
-        }
-
-        async function saveSettings() {
-            const config = {
-                scanners: {
-                    brother: { ip: document.getElementById('inputBrotherIp').value },
-                    canon_feeder: { ip: document.getElementById('inputCanonIp').value },
-                    canon_flatbed: { ip: document.getElementById('inputCanonIp').value }
-                },
-                destinations: {
-                    receipt: {
-                        spark: { email: document.getElementById('inputSparkEmail').value },
-                        folder: { path: document.getElementById('inputReceiptFolder').value }
-                    },
-                    document: {
-                        paperless: { path: document.getElementById('inputPaperlessPath').value },
-                        folder: { path: document.getElementById('inputDocFolder').value }
-                    }
-                }
-            };
-
-            try {
-                await fetch(`${API_BASE}/api/config`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(config)
-                });
-                closeSettings();
-                checkStatus();
-            } catch (error) {
-                alert('Failed to save: ' + error.message);
-            }
-        }
-
-        document.getElementById('settingsModal').addEventListener('click', function(e) {
-            if (e.target === this) closeSettings();
-        });
-
-        checkStatus();
-        setInterval(checkStatus, 10000);
+        
+        async function addPage() { if (!multiPageSessionId) return; const btn = document.getElementById('btnAddPage'); const status = document.getElementById('multiPageStatus'); btn.disabled = true; btn.classList.add('scanning'); status.textContent = 'Scanning...'; try { const response = await fetch(`${API_BASE}/api/scan/add/${multiPageSessionId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } }); const data = await response.json(); if (data.success) { document.getElementById('multiPageCount').textContent = data.total_pages; status.innerHTML = `<span style="color:#4ade80">✓ Added ${data.pages_added}</span> - Add more or tap Done`; } else { status.innerHTML = `<span style="color:#f87171">✗ ${data.error}</span>`; } } catch (error) { status.innerHTML = `<span style="color:#f87171">✗ ${error.message}</span>`; } btn.disabled = false; btn.classList.remove('scanning'); }
+        
+        async function finishMultiPage() { if (!multiPageSessionId) return; const btn = document.getElementById('btnFinish'); const status = document.getElementById('multiPageStatus'); btn.disabled = true; status.textContent = 'Creating PDF...'; try { const response = await fetch(`${API_BASE}/api/scan/done/${multiPageSessionId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } }); const data = await response.json(); if (data.success) { document.getElementById('multiPageModal').classList.remove('show'); multiPageSessionId = null; const result = document.getElementById('result'); result.className = 'result show success'; document.getElementById('resultTitle').textContent = '✅ Multi-Page Complete'; const destName = data.destination === 'spark' ? 'SparkReceipt' : data.destination === 'paperless' ? 'Paperless' : 'Folder'; document.getElementById('resultMessage').textContent = `${data.pages} pages → ${destName}`; } else { status.innerHTML = `<span style="color:#f87171">✗ ${data.error}</span>`; } } catch (error) { status.innerHTML = `<span style="color:#f87171">✗ ${error.message}</span>`; } btn.disabled = false; }
+        
+        async function cancelMultiPage() { if (multiPageSessionId) { try { await fetch(`${API_BASE}/api/scan/cancel/${multiPageSessionId}`, { method: 'POST' }); } catch (e) {} } multiPageSessionId = null; document.getElementById('multiPageModal').classList.remove('show'); }
+        
+        function openSettings() { fetch(`${API_BASE}/api/config`).then(r => r.json()).then(config => { document.getElementById('inputBrotherIp').value = config.scanners?.brother?.ip || ''; document.getElementById('inputCanonIp').value = config.scanners?.canon_feeder?.ip || ''; document.getElementById('inputSparkEmail').value = config.destinations?.receipt?.spark?.email || ''; document.getElementById('inputReceiptFolder').value = config.destinations?.receipt?.folder?.path || ''; document.getElementById('inputPaperlessPath').value = config.destinations?.document?.paperless?.path || ''; document.getElementById('inputDocFolder').value = config.destinations?.document?.folder?.path || ''; }); document.getElementById('settingsModal').classList.add('show'); }
+        
+        function closeSettings() { document.getElementById('settingsModal').classList.remove('show'); }
+        
+        async function saveSettings() { const config = { scanners: { brother: { ip: document.getElementById('inputBrotherIp').value }, canon_feeder: { ip: document.getElementById('inputCanonIp').value }, canon_flatbed: { ip: document.getElementById('inputCanonIp').value } }, destinations: { receipt: { spark: { email: document.getElementById('inputSparkEmail').value }, folder: { path: document.getElementById('inputReceiptFolder').value } }, document: { paperless: { path: document.getElementById('inputPaperlessPath').value }, folder: { path: document.getElementById('inputDocFolder').value } } } }; try { await fetch(`${API_BASE}/api/config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) }); closeSettings(); checkStatus(); } catch (error) { alert('Failed to save: ' + error.message); } }
+        
+        document.getElementById('settingsModal').addEventListener('click', function(e) { if (e.target === this) closeSettings(); });
+        checkStatus(); setInterval(checkStatus, 10000);
     </script>
 </body>
 </html>
