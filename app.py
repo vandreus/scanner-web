@@ -1,11 +1,7 @@
 """
 Scanner Web Controller
 """
-import os, ssl, uuid, urllib3, requests, json, threading, io, time, smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.base import MIMEBase
-from email.mime.text import MIMEText
-from email import encoders
+import os, uuid, urllib3, requests, json, threading, io, time
 from datetime import datetime
 from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
@@ -29,18 +25,17 @@ DEFAULT_CONFIG = {
     },
     "selected_scanner": "brother",
     "destinations": {
-        "receipt": {"spark": {"enabled": True, "email": "entreprise-ahwp2+expense@to.sparkreceipt.com"}, "folder": {"enabled": True, "path": "/scans/Receipts"}},
-        "document": {"paperless": {"enabled": True, "path": "/paperless"}, "folder": {"enabled": True, "path": "/scans/Documents"}}
+        "receipt": {
+            "folder": {"enabled": True, "path": "/scans/Receipts"},
+            "molcom": {"enabled": True, "api_url": "https://molcom-expenses.vandreus.workers.dev/api/ingest/scanner-receipt", "secret": "", "default_tag": "scanned"}
+        },
+        "document": {
+            "paperless": {"enabled": True, "path": "/paperless"},
+            "folder": {"enabled": True, "path": "/scans/Documents"},
+            "molcom": {"enabled": True, "api_url": "https://molcom-expenses.vandreus.workers.dev/api/ingest/scanner-receipt", "secret": "", "default_tag": "scanned"}
+        }
     },
-    "selected_destinations": {"receipt": "spark", "document": "paperless"},
-    "smtp": {
-        "host": "smtp.hostinger.com",
-        "port": 465,
-        "use_ssl": True,
-        "username": "scan@vandreus.com",
-        "password": "Dorina28/*",
-        "from_email": "scan@vandreus.com"
-    },
+    "selected_destinations": {"receipt": "molcom", "document": "paperless"},
     "prefix": "Scan"
 }
 
@@ -235,39 +230,42 @@ def save_pdf(pdf_bytes, output_path):
     except:
         return False
 
-def send_email_with_pdf(pdf_bytes, filename, to_email):
+def send_to_molcom(pdf_bytes, filename, profile, dest_config, tag=None, scanner_id=None):
+    """POST scanned PDF to the Molcom Expenses ingest endpoint.
+    Returns (ok, response_json) so callers can surface the new expense ID.
+    Profile maps directly: 'receipt' → expense, 'document' → invoice/bill."""
+    api_url = dest_config.get('api_url', '').strip()
+    secret = dest_config.get('secret', '').strip()
+    if not api_url or not secret:
+        print("Molcom delivery failed: api_url/secret not configured")
+        return False, None
     try:
-        smtp_config = CONFIG.get('smtp', {})
-        msg = MIMEMultipart()
-        msg['From'] = smtp_config.get('from_email', 'scan@vandreus.com')
-        msg['To'] = to_email
-        msg['Subject'] = f"Scan: {filename}"
-        msg.attach(MIMEText("Scanned document attached.", 'plain'))
-        attachment = MIMEBase('application', 'pdf')
-        attachment.set_payload(pdf_bytes)
-        encoders.encode_base64(attachment)
-        attachment.add_header('Content-Disposition', f'attachment; filename="{filename}"')
-        msg.attach(attachment)
-        
-        # Use SSL on port 465
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL(smtp_config.get('host', 'smtp.hostinger.com'), smtp_config.get('port', 465), context=context) as server:
-            server.login(smtp_config['username'], smtp_config['password'])
-            server.send_message(msg)
-        print(f"Email sent successfully to {to_email}")
-        return True
+        files = {'file': (filename, pdf_bytes, 'application/pdf')}
+        data = {
+            'profile': profile,
+            'tag': (tag or dest_config.get('default_tag') or 'scanned'),
+            'scanner': scanner_id or '',
+        }
+        headers = {'X-Scanner-Ingest-Secret': secret}
+        resp = requests.post(api_url, files=files, data=data, headers=headers, timeout=120)
+        if resp.status_code in (200, 201):
+            print(f"Molcom: delivered {filename} → {resp.json()}")
+            return True, resp.json()
+        print(f"Molcom delivery failed [{resp.status_code}]: {resp.text[:200]}")
+        return False, None
     except Exception as e:
-        print(f"Email error: {e}")
-        return False
+        print(f"Molcom delivery error: {e}")
+        return False, None
 
-def deliver_pdf(pdf_bytes, filename, profile, destination):
+def deliver_pdf(pdf_bytes, filename, profile, destination, tag=None, scanner_id=None):
+    """Dispatch a single PDF to the chosen destination. Returns either a bool
+    (folder/paperless) or a tuple (ok, extra) when the destination yields
+    structured response data (currently: 'molcom')."""
     dest_config = CONFIG['destinations'].get(profile, {}).get(destination, {})
-    if destination == 'spark':
-        email = dest_config.get('email', '')
-        return send_email_with_pdf(pdf_bytes, filename, email) if email else False
-    else:
-        path = dest_config.get('path', '')
-        return save_pdf(pdf_bytes, os.path.join(path, filename)) if path else False
+    if destination == 'molcom':
+        return send_to_molcom(pdf_bytes, filename, profile, dest_config, tag=tag, scanner_id=scanner_id)
+    path = dest_config.get('path', '')
+    return save_pdf(pdf_bytes, os.path.join(path, filename)) if path else False
 
 MULTI_PAGE_SESSIONS = {}
 
@@ -302,12 +300,33 @@ def api_select_destination():
         return jsonify({"success": True})
     return jsonify({"error": "Invalid profile"}), 400
 
+def _resolve_destination(data, profile):
+    """Per-request override > config default. Used by all scan endpoints so the
+    Molcom Expenses web app can force destination=molcom for in-app scans
+    without mutating the user's standalone-UI preference."""
+    override = (data or {}).get('destination')
+    if override:
+        return override
+    return CONFIG.get('selected_destinations', {}).get(profile, 'folder')
+
+def _resolve_scanner(data):
+    return (data or {}).get('scanner') or CONFIG.get('selected_scanner', 'brother')
+
+def _deliver_and_collect(pdf_bytes, filename, profile, destination, tag, scanner_id):
+    """Wrap deliver_pdf so we get back (ok, extra) consistently. extra carries
+    the Molcom response (expenseId, reviewUrl) when destination=molcom."""
+    result = deliver_pdf(pdf_bytes, filename, profile, destination, tag=tag, scanner_id=scanner_id)
+    if isinstance(result, tuple):
+        return result
+    return (bool(result), None)
+
 @app.route('/api/scan', methods=['POST'])
 def api_scan():
     data = request.json or {}
     preset, profile = data.get('preset', 'single'), data.get('profile', 'receipt')
-    scanner_id = CONFIG.get('selected_scanner', 'brother')
-    destination = CONFIG.get('selected_destinations', {}).get(profile, 'folder')
+    scanner_id = _resolve_scanner(data)
+    destination = _resolve_destination(data, profile)
+    tag = data.get('tag')
     duplex = preset == 'duplex_vertical'
     images = scan_document(scanner_id, duplex=duplex)
     if not images:
@@ -319,8 +338,14 @@ def api_scan():
     for idx, sheet_images in enumerate(sheets):
         filename = f"{prefix}_{timestamp_base}_{idx+1:03d}.pdf" if len(sheets) > 1 else f"{prefix}_{timestamp_base}.pdf"
         pdf_bytes = images_to_pdf_bytes(sheet_images)
-        if pdf_bytes and deliver_pdf(pdf_bytes, filename, profile, destination):
-            results.append({"filename": filename, "pages": len(sheet_images)})
+        if not pdf_bytes:
+            continue
+        ok, extra = _deliver_and_collect(pdf_bytes, filename, profile, destination, tag, scanner_id)
+        if ok:
+            entry = {"filename": filename, "pages": len(sheet_images)}
+            if extra:
+                entry["molcom"] = extra
+            results.append(entry)
     if results:
         return jsonify({"success": True, "files": results, "total_sheets": len(results), "destination": destination, "profile": profile})
     return jsonify({"error": "No PDFs created"}), 500
@@ -331,23 +356,39 @@ def api_scan_multi():
     data = request.json or {}
     profile = data.get('profile', 'receipt')
     duplex = data.get('duplex', False)
-    scanner_id = CONFIG.get('selected_scanner', 'brother')
-    destination = CONFIG.get('selected_destinations', {}).get(profile, 'folder')
+    scanner_id = _resolve_scanner(data)
+    destination = _resolve_destination(data, profile)
+    tag = data.get('tag')
     images = scan_document(scanner_id, duplex=duplex)
     if not images:
         return jsonify({"error": "Scan failed - no images received"}), 500
     prefix = CONFIG.get('prefix', 'Scan')
     filename = f"{prefix}_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}.pdf"
     pdf_bytes = images_to_pdf_bytes(images)
-    if pdf_bytes and deliver_pdf(pdf_bytes, filename, profile, destination):
-        return jsonify({"success": True, "filename": filename, "pages": len(images), "profile": profile, "destination": destination})
-    return jsonify({"error": "Failed to create/deliver PDF"}), 500
+    if not pdf_bytes:
+        return jsonify({"error": "Failed to create PDF"}), 500
+    ok, extra = _deliver_and_collect(pdf_bytes, filename, profile, destination, tag, scanner_id)
+    if ok:
+        payload = {"success": True, "filename": filename, "pages": len(images), "profile": profile, "destination": destination}
+        if extra:
+            payload["molcom"] = extra
+        return jsonify(payload)
+    return jsonify({"error": "Failed to deliver PDF"}), 500
 
 @app.route('/api/scan/start', methods=['POST'])
 def api_scan_start():
     session_id = str(uuid.uuid4())[:8]
     data = request.json or {}
-    MULTI_PAGE_SESSIONS[session_id] = {"images": [], "profile": data.get('profile', 'receipt'), "scanner": CONFIG.get('selected_scanner', 'brother'), "duplex": data.get('duplex', False)}
+    MULTI_PAGE_SESSIONS[session_id] = {
+        "images": [],
+        "profile": data.get('profile', 'receipt'),
+        "scanner": _resolve_scanner(data),
+        "duplex": data.get('duplex', False),
+        # Carry the destination/tag overrides through to /done so the whole
+        # session lands in the same place even if the user changes config mid-scan.
+        "destination": data.get('destination'),
+        "tag": data.get('tag'),
+    }
     return jsonify({"success": True, "session_id": session_id})
 
 @app.route('/api/scan/add/<session_id>', methods=['POST'])
@@ -371,13 +412,21 @@ def api_scan_done(session_id):
         del MULTI_PAGE_SESSIONS[session_id]
         return jsonify({"error": "No pages scanned"}), 400
     profile = session["profile"]
-    destination = CONFIG.get('selected_destinations', {}).get(profile, 'folder')
+    destination = session.get("destination") or CONFIG.get('selected_destinations', {}).get(profile, 'folder')
+    tag = session.get("tag")
+    scanner_id = session.get("scanner")
     filename = f"{CONFIG.get('prefix', 'Scan')}_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}.pdf"
     pdf_bytes = images_to_pdf_bytes(images)
-    if pdf_bytes and deliver_pdf(pdf_bytes, filename, profile, destination):
+    if not pdf_bytes:
+        return jsonify({"error": "Failed to create PDF"}), 500
+    ok, extra = _deliver_and_collect(pdf_bytes, filename, profile, destination, tag, scanner_id)
+    if ok:
         del MULTI_PAGE_SESSIONS[session_id]
-        return jsonify({"success": True, "filename": filename, "pages": len(images), "profile": profile, "destination": destination})
-    return jsonify({"error": "Failed to create/deliver PDF"}), 500
+        payload = {"success": True, "filename": filename, "pages": len(images), "profile": profile, "destination": destination}
+        if extra:
+            payload["molcom"] = extra
+        return jsonify(payload)
+    return jsonify({"error": "Failed to deliver PDF"}), 500
 
 @app.route('/api/scan/cancel/<session_id>', methods=['POST'])
 def api_scan_cancel(session_id):
@@ -388,8 +437,6 @@ def api_scan_cancel(session_id):
 def api_config():
     if request.method == 'POST':
         data = request.json or {}
-        if 'smtp' in data:
-            CONFIG['smtp'].update(data['smtp'])
         if 'destinations' in data:
             for profile, dests in data['destinations'].items():
                 if profile in CONFIG['destinations']:

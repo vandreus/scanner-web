@@ -87,11 +87,12 @@
             <button class="toggle-btn" id="profileDocument" onclick="setProfile('document')">📄 Documents</button>
         </div>
         <div class="toggle-row" id="destReceipt">
-            <button class="toggle-btn dest-active" id="destReceiptSpark" onclick="setDestination('receipt', 'spark')">📧 SparkReceipt</button>
+            <button class="toggle-btn dest-active" id="destReceiptMolcom" onclick="setDestination('receipt', 'molcom')">📤 Molcom</button>
             <button class="toggle-btn" id="destReceiptFolder" onclick="setDestination('receipt', 'folder')">📁 Folder</button>
         </div>
         <div class="toggle-row" id="destDocument" style="display: none;">
             <button class="toggle-btn dest-active" id="destDocPaperless" onclick="setDestination('document', 'paperless')">📥 Paperless</button>
+            <button class="toggle-btn" id="destDocMolcom" onclick="setDestination('document', 'molcom')">📤 Molcom (as bill)</button>
             <button class="toggle-btn" id="destDocFolder" onclick="setDestination('document', 'folder')">📁 Folder</button>
         </div>
         <div class="scan-buttons">
@@ -103,7 +104,7 @@
         <div class="result" id="result"><h3 id="resultTitle">Result</h3><p id="resultMessage"></p></div>
         <div class="settings" onclick="openSettings()">
             <h3>⚙️ Settings <span style="float:right;opacity:0.5">tap</span></h3>
-            <div class="setting-row"><span>📧 SparkReceipt</span><span class="setting-value" id="sparkEmail">-</span></div>
+            <div class="setting-row"><span>📤 Molcom URL</span><span class="setting-value" id="molcomUrl">-</span></div>
             <div class="setting-row"><span>📥 Paperless</span><span class="setting-value" id="paperlessPath">-</span></div>
         </div>
     </div>
@@ -121,7 +122,9 @@
             <h2>⚙️ Settings</h2>
             <label>Brother IP</label><input type="text" id="inputBrotherIp" placeholder="10.69.7.167">
             <label>Canon IP</label><input type="text" id="inputCanonIp" placeholder="10.69.7.107">
-            <label>📧 SparkReceipt Email</label><input type="text" id="inputSparkEmail" placeholder="email@to.sparkreceipt.com">
+            <label>📤 Molcom API URL</label><input type="text" id="inputMolcomUrl" placeholder="https://molcom-expenses.vandreus.workers.dev/api/ingest/scanner-receipt">
+            <label>🔑 Molcom Secret</label><input type="password" id="inputMolcomSecret" placeholder="X-Scanner-Ingest-Secret value">
+            <label>🏷 Default Tag</label><input type="text" id="inputMolcomTag" placeholder="scanned">
             <label>📁 Receipts Folder</label><input type="text" id="inputReceiptFolder" placeholder="/scans/Receipts">
             <label>📥 Paperless Folder</label><input type="text" id="inputPaperlessPath" placeholder="/paperless">
             <label>📁 Documents Folder</label><input type="text" id="inputDocFolder" placeholder="/scans/Documents">
@@ -130,11 +133,22 @@
     </div>
     <script>
         const API_BASE = '';
-        let currentProfile = 'receipt', currentDestinations = { receipt: 'spark', document: 'paperless' }, currentScanner = 'brother', scannerInfo = {}, multiPageSessionId = null, multiPageDuplex = false;
-        
+        let currentProfile = 'receipt', currentDestinations = { receipt: 'molcom', document: 'paperless' }, currentScanner = 'brother', scannerInfo = {}, multiPageSessionId = null, multiPageDuplex = false;
+
         function setProfile(profile) { currentProfile = profile; document.getElementById('profileReceipt').classList.toggle('active', profile === 'receipt'); document.getElementById('profileDocument').classList.toggle('active', profile === 'document'); document.getElementById('destReceipt').style.display = profile === 'receipt' ? 'flex' : 'none'; document.getElementById('destDocument').style.display = profile === 'document' ? 'flex' : 'none'; }
-        
-        function setDestination(profile, dest, save = true) { currentDestinations[profile] = dest; if (profile === 'receipt') { document.getElementById('destReceiptSpark').classList.toggle('dest-active', dest === 'spark'); document.getElementById('destReceiptFolder').classList.toggle('dest-active', dest === 'folder'); } else { document.getElementById('destDocPaperless').classList.toggle('dest-active', dest === 'paperless'); document.getElementById('destDocFolder').classList.toggle('dest-active', dest === 'folder'); } if (save) { fetch(`${API_BASE}/api/destination/select`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile, destination: dest }) }); } }
+
+        function setDestination(profile, dest, save = true) {
+            currentDestinations[profile] = dest;
+            if (profile === 'receipt') {
+                document.getElementById('destReceiptMolcom').classList.toggle('dest-active', dest === 'molcom');
+                document.getElementById('destReceiptFolder').classList.toggle('dest-active', dest === 'folder');
+            } else {
+                document.getElementById('destDocPaperless').classList.toggle('dest-active', dest === 'paperless');
+                document.getElementById('destDocMolcom').classList.toggle('dest-active', dest === 'molcom');
+                document.getElementById('destDocFolder').classList.toggle('dest-active', dest === 'folder');
+            }
+            if (save) { fetch(`${API_BASE}/api/destination/select`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile, destination: dest }) }); }
+        }
         
         async function selectScanner(scannerId) { currentScanner = scannerId; await fetch(`${API_BASE}/api/scanner/select`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ scanner: scannerId }) }); updateUI(); checkStatus(); }
         
@@ -145,9 +159,73 @@
             document.getElementById('btnMultiDuplex').style.display = supportsDuplex ? 'flex' : 'none'; 
         }
         
-        async function checkStatus() { try { const response = await fetch(`${API_BASE}/api/status`); const data = await response.json(); currentScanner = data.selected_scanner || 'brother'; scannerInfo = data.scanners || {}; currentDestinations = data.selected_destinations || { receipt: 'spark', document: 'paperless' }; document.getElementById('scannerSelect').value = currentScanner; const scanner = scannerInfo[currentScanner] || {}; const dot = document.getElementById('statusDot'); const text = document.getElementById('statusText'); if (scanner.status === 'Idle' || scanner.status === 'Ready') { dot.className = 'status-dot online'; text.textContent = 'Ready'; } else if (scanner.status === 'Offline') { dot.className = 'status-dot offline'; text.textContent = 'Offline'; } else { dot.className = 'status-dot'; text.textContent = scanner.status || '...'; } setDestination('receipt', currentDestinations.receipt || 'spark', false); setDestination('document', currentDestinations.document || 'paperless', false); if (data.destinations) { document.getElementById('sparkEmail').textContent = data.destinations.receipt?.spark?.email || '-'; document.getElementById('paperlessPath').textContent = data.destinations.document?.paperless?.path || '-'; } updateUI(); } catch (error) { document.getElementById('statusDot').className = 'status-dot offline'; document.getElementById('statusText').textContent = 'Error'; } }
+        async function checkStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/status`);
+                const data = await response.json();
+                currentScanner = data.selected_scanner || 'brother';
+                scannerInfo = data.scanners || {};
+                currentDestinations = data.selected_destinations || { receipt: 'molcom', document: 'paperless' };
+                document.getElementById('scannerSelect').value = currentScanner;
+                const scanner = scannerInfo[currentScanner] || {};
+                const dot = document.getElementById('statusDot');
+                const text = document.getElementById('statusText');
+                if (scanner.status === 'Idle' || scanner.status === 'Ready') { dot.className = 'status-dot online'; text.textContent = 'Ready'; }
+                else if (scanner.status === 'Offline') { dot.className = 'status-dot offline'; text.textContent = 'Offline'; }
+                else { dot.className = 'status-dot'; text.textContent = scanner.status || '...'; }
+                setDestination('receipt', currentDestinations.receipt || 'molcom', false);
+                setDestination('document', currentDestinations.document || 'paperless', false);
+                if (data.destinations) {
+                    document.getElementById('molcomUrl').textContent = data.destinations.receipt?.molcom?.api_url || '-';
+                    document.getElementById('paperlessPath').textContent = data.destinations.document?.paperless?.path || '-';
+                }
+                updateUI();
+            } catch (error) {
+                document.getElementById('statusDot').className = 'status-dot offline';
+                document.getElementById('statusText').textContent = 'Error';
+            }
+        }
+
+        function destName(d) {
+            return d === 'molcom' ? 'Molcom Expenses' : d === 'paperless' ? 'Paperless' : 'Folder';
+        }
         
-        async function scan(preset) { const btn = document.getElementById(preset === 'single' ? 'btnSingle' : 'btnDuplex'); const allBtns = document.querySelectorAll('.scan-btn'); allBtns.forEach(b => b.disabled = true); btn.classList.add('scanning'); document.getElementById('statusDot').className = 'status-dot scanning'; document.getElementById('statusText').textContent = 'Scanning...'; document.getElementById('result').classList.remove('show'); try { const response = await fetch(`${API_BASE}/api/scan`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset, profile: currentProfile }) }); const data = await response.json(); const result = document.getElementById('result'); if (data.success) { result.className = 'result show success'; document.getElementById('resultTitle').textContent = '✅ Scan Complete'; const destName = data.destination === 'spark' ? 'SparkReceipt' : data.destination === 'paperless' ? 'Paperless' : 'Folder'; document.getElementById('resultMessage').textContent = `${data.total_sheets} PDF(s) → ${destName}`; } else { result.className = 'result show error'; document.getElementById('resultTitle').textContent = '❌ Scan Failed'; document.getElementById('resultMessage').textContent = data.error || 'Unknown error'; } } catch (error) { document.getElementById('result').className = 'result show error'; document.getElementById('resultTitle').textContent = '❌ Error'; document.getElementById('resultMessage').textContent = error.message; } allBtns.forEach(b => b.disabled = false); btn.classList.remove('scanning'); checkStatus(); }
+        async function scan(preset) {
+            const btn = document.getElementById(preset === 'single' ? 'btnSingle' : 'btnDuplex');
+            const allBtns = document.querySelectorAll('.scan-btn');
+            allBtns.forEach(b => b.disabled = true);
+            btn.classList.add('scanning');
+            document.getElementById('statusDot').className = 'status-dot scanning';
+            document.getElementById('statusText').textContent = 'Scanning...';
+            document.getElementById('result').classList.remove('show');
+            try {
+                const response = await fetch(`${API_BASE}/api/scan`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ preset, profile: currentProfile }) });
+                const data = await response.json();
+                const result = document.getElementById('result');
+                if (data.success) {
+                    result.className = 'result show success';
+                    document.getElementById('resultTitle').textContent = '✅ Scan Complete';
+                    document.getElementById('resultMessage').innerHTML = `${data.total_sheets} PDF(s) → ${destName(data.destination)}` + renderMolcomLinks(data.files);
+                } else {
+                    result.className = 'result show error';
+                    document.getElementById('resultTitle').textContent = '❌ Scan Failed';
+                    document.getElementById('resultMessage').textContent = data.error || 'Unknown error';
+                }
+            } catch (error) {
+                document.getElementById('result').className = 'result show error';
+                document.getElementById('resultTitle').textContent = '❌ Error';
+                document.getElementById('resultMessage').textContent = error.message;
+            }
+            allBtns.forEach(b => b.disabled = false);
+            btn.classList.remove('scanning');
+            checkStatus();
+        }
+
+        function renderMolcomLinks(files) {
+            if (!files) return '';
+            const links = files.filter(f => f.molcom?.reviewUrl).map(f => `<br><a href="${f.molcom.reviewUrl}" target="_blank" style="color:#4ade80;text-decoration:underline">Review #${f.molcom.expenseId}</a>`).join('');
+            return links;
+        }
         
         async function scanMultiPageDirect(duplex) {
             const btn = document.getElementById(duplex ? 'btnMultiDuplex' : 'btnMulti');
@@ -164,8 +242,8 @@
                 if (data.success) {
                     result.className = 'result show success';
                     document.getElementById('resultTitle').textContent = '✅ Multi-Page Complete';
-                    const destName = data.destination === 'spark' ? 'SparkReceipt' : data.destination === 'paperless' ? 'Paperless' : 'Folder';
-                    document.getElementById('resultMessage').textContent = `${data.pages} pages → ${destName}`;
+                    const link = data.molcom?.reviewUrl ? `<br><a href="${data.molcom.reviewUrl}" target="_blank" style="color:#4ade80;text-decoration:underline">Review #${data.molcom.expenseId}</a>` : '';
+                    document.getElementById('resultMessage').innerHTML = `${data.pages} pages → ${destName(data.destination)}` + link;
                 } else {
                     result.className = 'result show error';
                     document.getElementById('resultTitle').textContent = '❌ Scan Failed';
@@ -195,15 +273,81 @@
         
         async function addPage() { if (!multiPageSessionId) return; const btn = document.getElementById('btnAddPage'); const status = document.getElementById('multiPageStatus'); btn.disabled = true; btn.classList.add('scanning'); status.textContent = 'Scanning...'; try { const response = await fetch(`${API_BASE}/api/scan/add/${multiPageSessionId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } }); const data = await response.json(); if (data.success) { document.getElementById('multiPageCount').textContent = data.total_pages; status.innerHTML = `<span style="color:#4ade80">✓ Added ${data.pages_added}</span> - Add more or tap Done`; } else { status.innerHTML = `<span style="color:#f87171">✗ ${data.error}</span>`; } } catch (error) { status.innerHTML = `<span style="color:#f87171">✗ ${error.message}</span>`; } btn.disabled = false; btn.classList.remove('scanning'); }
         
-        async function finishMultiPage() { if (!multiPageSessionId) return; const btn = document.getElementById('btnFinish'); const status = document.getElementById('multiPageStatus'); btn.disabled = true; status.textContent = 'Creating PDF...'; try { const response = await fetch(`${API_BASE}/api/scan/done/${multiPageSessionId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } }); const data = await response.json(); if (data.success) { document.getElementById('multiPageModal').classList.remove('show'); multiPageSessionId = null; const result = document.getElementById('result'); result.className = 'result show success'; document.getElementById('resultTitle').textContent = '✅ Multi-Page Complete'; const destName = data.destination === 'spark' ? 'SparkReceipt' : data.destination === 'paperless' ? 'Paperless' : 'Folder'; document.getElementById('resultMessage').textContent = `${data.pages} pages → ${destName}`; } else { status.innerHTML = `<span style="color:#f87171">✗ ${data.error}</span>`; } } catch (error) { status.innerHTML = `<span style="color:#f87171">✗ ${error.message}</span>`; } btn.disabled = false; }
+        async function finishMultiPage() {
+            if (!multiPageSessionId) return;
+            const btn = document.getElementById('btnFinish');
+            const status = document.getElementById('multiPageStatus');
+            btn.disabled = true;
+            status.textContent = 'Creating PDF...';
+            try {
+                const response = await fetch(`${API_BASE}/api/scan/done/${multiPageSessionId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('multiPageModal').classList.remove('show');
+                    multiPageSessionId = null;
+                    const result = document.getElementById('result');
+                    result.className = 'result show success';
+                    document.getElementById('resultTitle').textContent = '✅ Multi-Page Complete';
+                    const link = data.molcom?.reviewUrl ? `<br><a href="${data.molcom.reviewUrl}" target="_blank" style="color:#4ade80;text-decoration:underline">Review #${data.molcom.expenseId}</a>` : '';
+                    document.getElementById('resultMessage').innerHTML = `${data.pages} pages → ${destName(data.destination)}` + link;
+                } else {
+                    status.innerHTML = `<span style="color:#f87171">✗ ${data.error}</span>`;
+                }
+            } catch (error) {
+                status.innerHTML = `<span style="color:#f87171">✗ ${error.message}</span>`;
+            }
+            btn.disabled = false;
+        }
         
         async function cancelMultiPage() { if (multiPageSessionId) { try { await fetch(`${API_BASE}/api/scan/cancel/${multiPageSessionId}`, { method: 'POST' }); } catch (e) {} } multiPageSessionId = null; document.getElementById('multiPageModal').classList.remove('show'); }
         
-        function openSettings() { fetch(`${API_BASE}/api/config`).then(r => r.json()).then(config => { document.getElementById('inputBrotherIp').value = config.scanners?.brother?.ip || ''; document.getElementById('inputCanonIp').value = config.scanners?.canon_feeder?.ip || ''; document.getElementById('inputSparkEmail').value = config.destinations?.receipt?.spark?.email || ''; document.getElementById('inputReceiptFolder').value = config.destinations?.receipt?.folder?.path || ''; document.getElementById('inputPaperlessPath').value = config.destinations?.document?.paperless?.path || ''; document.getElementById('inputDocFolder').value = config.destinations?.document?.folder?.path || ''; }); document.getElementById('settingsModal').classList.add('show'); }
-        
+        function openSettings() {
+            fetch(`${API_BASE}/api/config`).then(r => r.json()).then(config => {
+                document.getElementById('inputBrotherIp').value = config.scanners?.brother?.ip || '';
+                document.getElementById('inputCanonIp').value = config.scanners?.canon_feeder?.ip || '';
+                const mol = config.destinations?.receipt?.molcom || {};
+                document.getElementById('inputMolcomUrl').value = mol.api_url || '';
+                document.getElementById('inputMolcomSecret').value = mol.secret || '';
+                document.getElementById('inputMolcomTag').value = mol.default_tag || 'scanned';
+                document.getElementById('inputReceiptFolder').value = config.destinations?.receipt?.folder?.path || '';
+                document.getElementById('inputPaperlessPath').value = config.destinations?.document?.paperless?.path || '';
+                document.getElementById('inputDocFolder').value = config.destinations?.document?.folder?.path || '';
+            });
+            document.getElementById('settingsModal').classList.add('show');
+        }
+
         function closeSettings() { document.getElementById('settingsModal').classList.remove('show'); }
-        
-        async function saveSettings() { const config = { scanners: { brother: { ip: document.getElementById('inputBrotherIp').value }, canon_feeder: { ip: document.getElementById('inputCanonIp').value }, canon_flatbed: { ip: document.getElementById('inputCanonIp').value } }, destinations: { receipt: { spark: { email: document.getElementById('inputSparkEmail').value }, folder: { path: document.getElementById('inputReceiptFolder').value } }, document: { paperless: { path: document.getElementById('inputPaperlessPath').value }, folder: { path: document.getElementById('inputDocFolder').value } } } }; try { await fetch(`${API_BASE}/api/config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) }); closeSettings(); checkStatus(); } catch (error) { alert('Failed to save: ' + error.message); } }
+
+        async function saveSettings() {
+            const molcomCfg = {
+                api_url: document.getElementById('inputMolcomUrl').value,
+                secret: document.getElementById('inputMolcomSecret').value,
+                default_tag: document.getElementById('inputMolcomTag').value || 'scanned',
+            };
+            const config = {
+                scanners: {
+                    brother: { ip: document.getElementById('inputBrotherIp').value },
+                    canon_feeder: { ip: document.getElementById('inputCanonIp').value },
+                    canon_flatbed: { ip: document.getElementById('inputCanonIp').value }
+                },
+                destinations: {
+                    receipt: {
+                        molcom: molcomCfg,
+                        folder: { path: document.getElementById('inputReceiptFolder').value }
+                    },
+                    document: {
+                        molcom: molcomCfg,
+                        paperless: { path: document.getElementById('inputPaperlessPath').value },
+                        folder: { path: document.getElementById('inputDocFolder').value }
+                    }
+                }
+            };
+            try {
+                await fetch(`${API_BASE}/api/config`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) });
+                closeSettings();
+                checkStatus();
+            } catch (error) { alert('Failed to save: ' + error.message); }
+        }
         
         document.getElementById('settingsModal').addEventListener('click', function(e) { if (e.target === this) closeSettings(); });
         checkStatus(); setInterval(checkStatus, 10000);
