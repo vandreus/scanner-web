@@ -207,7 +207,10 @@ def auto_crop_image(img):
     except:
         return img
 
-def images_to_pdf_bytes(images):
+def images_to_pdf_bytes(images, return_jpegs=False):
+    """Convert PIL images to a single PDF blob. When return_jpegs=True, also
+    returns the per-page JPEG byte arrays (needed by the molcom delivery so it
+    can ship the first page as a preview image for AI vision extraction)."""
     try:
         img_bytes_list = []
         for img in images:
@@ -217,9 +220,12 @@ def images_to_pdf_bytes(images):
             buf = io.BytesIO()
             cropped.save(buf, format='JPEG', quality=90)
             img_bytes_list.append(buf.getvalue())
-        return img2pdf.convert(img_bytes_list)
+        pdf = img2pdf.convert(img_bytes_list)
+        if return_jpegs:
+            return pdf, img_bytes_list
+        return pdf
     except:
-        return None
+        return (None, None) if return_jpegs else None
 
 def save_pdf(pdf_bytes, output_path):
     try:
@@ -230,10 +236,15 @@ def save_pdf(pdf_bytes, output_path):
     except:
         return False
 
-def send_to_molcom(pdf_bytes, filename, profile, dest_config, tag=None, scanner_id=None):
+def send_to_molcom(pdf_bytes, filename, profile, dest_config, tag=None, scanner_id=None, preview_image=None):
     """POST scanned PDF to the Molcom Expenses ingest endpoint.
     Returns (ok, response_json) so callers can surface the new expense ID.
-    Profile maps directly: 'receipt' → expense, 'document' → invoice/bill."""
+    Profile maps directly: 'receipt' → expense, 'document' → invoice/bill.
+
+    preview_image: optional raw JPEG bytes of the first scanned page. When
+    provided, the worker runs the vision model on this image instead of trying
+    PDF text extraction — necessary because img2pdf wraps JPEGs into
+    image-only PDFs that have no extractable text."""
     api_url = dest_config.get('api_url', '').strip()
     secret = dest_config.get('secret', '').strip()
     if not api_url or not secret:
@@ -241,11 +252,14 @@ def send_to_molcom(pdf_bytes, filename, profile, dest_config, tag=None, scanner_
         return False, None
     try:
         files = {'file': (filename, pdf_bytes, 'application/pdf')}
+        if preview_image is not None:
+            files['preview'] = ('preview.jpg', preview_image, 'image/jpeg')
         data = {
             'profile': profile,
-            'tag': (tag or dest_config.get('default_tag') or 'scanned'),
             'scanner': scanner_id or '',
         }
+        if tag:
+            data['tag'] = tag
         headers = {'X-Scanner-Ingest-Secret': secret}
         resp = requests.post(api_url, files=files, data=data, headers=headers, timeout=120)
         if resp.status_code in (200, 201):
@@ -257,13 +271,17 @@ def send_to_molcom(pdf_bytes, filename, profile, dest_config, tag=None, scanner_
         print(f"Molcom delivery error: {e}")
         return False, None
 
-def deliver_pdf(pdf_bytes, filename, profile, destination, tag=None, scanner_id=None):
+def deliver_pdf(pdf_bytes, filename, profile, destination, tag=None, scanner_id=None, preview_image=None):
     """Dispatch a single PDF to the chosen destination. Returns either a bool
     (folder/paperless) or a tuple (ok, extra) when the destination yields
-    structured response data (currently: 'molcom')."""
+    structured response data (currently: 'molcom').
+
+    preview_image: optional first-page JPEG bytes — only used by the molcom
+    destination so the worker can run vision-model extraction on the image
+    instead of trying (and failing) to pull text from an image-only PDF."""
     dest_config = CONFIG['destinations'].get(profile, {}).get(destination, {})
     if destination == 'molcom':
-        return send_to_molcom(pdf_bytes, filename, profile, dest_config, tag=tag, scanner_id=scanner_id)
+        return send_to_molcom(pdf_bytes, filename, profile, dest_config, tag=tag, scanner_id=scanner_id, preview_image=preview_image)
     path = dest_config.get('path', '')
     return save_pdf(pdf_bytes, os.path.join(path, filename)) if path else False
 
@@ -312,10 +330,10 @@ def _resolve_destination(data, profile):
 def _resolve_scanner(data):
     return (data or {}).get('scanner') or CONFIG.get('selected_scanner', 'brother')
 
-def _deliver_and_collect(pdf_bytes, filename, profile, destination, tag, scanner_id):
+def _deliver_and_collect(pdf_bytes, filename, profile, destination, tag, scanner_id, preview_image=None):
     """Wrap deliver_pdf so we get back (ok, extra) consistently. extra carries
     the Molcom response (expenseId, reviewUrl) when destination=molcom."""
-    result = deliver_pdf(pdf_bytes, filename, profile, destination, tag=tag, scanner_id=scanner_id)
+    result = deliver_pdf(pdf_bytes, filename, profile, destination, tag=tag, scanner_id=scanner_id, preview_image=preview_image)
     if isinstance(result, tuple):
         return result
     return (bool(result), None)
@@ -337,10 +355,11 @@ def api_scan():
     sheets = [images[i:i+2] for i in range(0, len(images), 2)] if duplex else [[img] for img in images]
     for idx, sheet_images in enumerate(sheets):
         filename = f"{prefix}_{timestamp_base}_{idx+1:03d}.pdf" if len(sheets) > 1 else f"{prefix}_{timestamp_base}.pdf"
-        pdf_bytes = images_to_pdf_bytes(sheet_images)
+        pdf_bytes, jpegs = images_to_pdf_bytes(sheet_images, return_jpegs=True)
         if not pdf_bytes:
             continue
-        ok, extra = _deliver_and_collect(pdf_bytes, filename, profile, destination, tag, scanner_id)
+        preview = jpegs[0] if jpegs else None
+        ok, extra = _deliver_and_collect(pdf_bytes, filename, profile, destination, tag, scanner_id, preview_image=preview)
         if ok:
             entry = {"filename": filename, "pages": len(sheet_images)}
             if extra:
@@ -364,10 +383,11 @@ def api_scan_multi():
         return jsonify({"error": "Scan failed - no images received"}), 500
     prefix = CONFIG.get('prefix', 'Scan')
     filename = f"{prefix}_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}.pdf"
-    pdf_bytes = images_to_pdf_bytes(images)
+    pdf_bytes, jpegs = images_to_pdf_bytes(images, return_jpegs=True)
     if not pdf_bytes:
         return jsonify({"error": "Failed to create PDF"}), 500
-    ok, extra = _deliver_and_collect(pdf_bytes, filename, profile, destination, tag, scanner_id)
+    preview = jpegs[0] if jpegs else None
+    ok, extra = _deliver_and_collect(pdf_bytes, filename, profile, destination, tag, scanner_id, preview_image=preview)
     if ok:
         payload = {"success": True, "filename": filename, "pages": len(images), "profile": profile, "destination": destination}
         if extra:
@@ -416,10 +436,11 @@ def api_scan_done(session_id):
     tag = session.get("tag")
     scanner_id = session.get("scanner")
     filename = f"{CONFIG.get('prefix', 'Scan')}_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}.pdf"
-    pdf_bytes = images_to_pdf_bytes(images)
+    pdf_bytes, jpegs = images_to_pdf_bytes(images, return_jpegs=True)
     if not pdf_bytes:
         return jsonify({"error": "Failed to create PDF"}), 500
-    ok, extra = _deliver_and_collect(pdf_bytes, filename, profile, destination, tag, scanner_id)
+    preview = jpegs[0] if jpegs else None
+    ok, extra = _deliver_and_collect(pdf_bytes, filename, profile, destination, tag, scanner_id, preview_image=preview)
     if ok:
         del MULTI_PAGE_SESSIONS[session_id]
         payload = {"success": True, "filename": filename, "pages": len(images), "profile": profile, "destination": destination}
