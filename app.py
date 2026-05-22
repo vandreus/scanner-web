@@ -13,7 +13,19 @@ Image.MAX_IMAGE_PIXELS = 200000000
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 app = Flask(__name__)
-CORS(app)
+# Tight CORS so the in-app scan modal on expenses.molcom.ca / time.molcom.ca can
+# send the Cloudflare Access SSO cookie cross-origin. `supports_credentials=True`
+# requires an explicit origin allowlist — wildcard `*` is rejected by browsers
+# when credentials are included.
+CORS(
+    app,
+    origins=[
+        "https://expenses.molcom.ca",
+        "https://time.molcom.ca",
+        "https://scan.vandreus.com",
+    ],
+    supports_credentials=True,
+)
 
 CONFIG_FILE = os.environ.get('CONFIG_FILE', '/scans/.config/scanner.json')
 
@@ -454,10 +466,29 @@ def api_scan_cancel(session_id):
     MULTI_PAGE_SESSIONS.pop(session_id, None)
     return jsonify({"success": True})
 
+def _redacted_config():
+    """Defense in depth: never serve the molcom ingest secret in plaintext.
+    The Settings UI only writes when you re-enter the field, so the placeholder
+    is fine — saving a blank/placeholder secret won't wipe the stored value."""
+    import copy
+    cfg = copy.deepcopy(CONFIG)
+    for profile in ('receipt', 'document'):
+        sec = cfg.get('destinations', {}).get(profile, {}).get('molcom', {}).get('secret')
+        if sec:
+            cfg['destinations'][profile]['molcom']['secret'] = '***'
+    return cfg
+
 @app.route('/api/config', methods=['GET', 'POST'])
 def api_config():
     if request.method == 'POST':
         data = request.json or {}
+        # Ignore placeholder values from the redacted GET response so an
+        # accidental save doesn't overwrite the real secret with "***".
+        if 'destinations' in data:
+            for profile in ('receipt', 'document'):
+                mol = data.get('destinations', {}).get(profile, {}).get('molcom') or {}
+                if mol.get('secret') in ('', '***'):
+                    mol.pop('secret', None)
         if 'destinations' in data:
             for profile, dests in data['destinations'].items():
                 if profile in CONFIG['destinations']:
@@ -470,7 +501,7 @@ def api_config():
                     CONFIG['scanners'][scanner_id].update(settings)
         save_config(CONFIG)
         return jsonify({"success": True})
-    return jsonify(CONFIG)
+    return jsonify(_redacted_config())
 
 if __name__ == '__main__':
     for profile, dests in CONFIG.get('destinations', {}).items():
